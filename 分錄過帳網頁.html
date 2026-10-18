@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會計解題與學習助手：綜合損益架構與 T 字帳</title>
+    <style>
+        :root {
+            --primary-color: #0284c7;
+            --success-color: #16a34a;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --text-color: #0f172a;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1450px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        h1 { color: var(--primary-color); margin-bottom: 6px; font-size: 1.8rem; }
+        p.subtitle { color: #64748b; margin-top: 0; }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 390px 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 1100px) {
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        h2 { font-size: 1.15rem; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-top: 0; color: #1e293b; }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #334155;
+        }
+        input, select {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+        .entry-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+        .entry-row input[type="text"] { flex: 2; }
+        .entry-row input[type="number"] { flex: 1.5; }
+        .entry-row select { flex: 1.8; }
+        .btn-remove {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button.btn-add { background-color: #475569; padding: 4px 8px; font-size: 0.8rem; }
+        button.btn-submit { background-color: var(--success-color); width: 100%; margin-top: 10px; font-size: 0.95rem; }
+        button.close-btn { background-color: var(--warning-color); width: 100%; margin-top: 10px; }
+        button.secondary { background-color: #64748b; width: 100%; margin-top: 6px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.88rem;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        th { background-color: #f1f5f9; }
+        .text-right { text-align: right; }
+        .indent { padding-left: 20px !important; }
+        .closing-row { background-color: #fffbeb; }
+
+        .t-accounts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .t-account {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #fff;
+            padding: 8px;
+            position: relative;
+        }
+        .t-account.closed { background-color: #f8fafc; }
+        .t-account-title {
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 4px;
+            margin-bottom: 5px;
+            color: #0f172a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .badge {
+            font-size: 0.62rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
+        .badge-bs { background: #dcfce7; color: #166534; }
+        .badge-pnl { background: #fee2e2; color: #991b1b; }
+        .badge-oci-reclass { background: #fef3c7; color: #92400e; }
+        .badge-oci-noreclass { background: #fae8ff; color: #86198f; }
+
+        .t-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 80px;
+            position: relative;
+        }
+        .t-body::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #334155;
+        }
+        .t-side {
+            padding: 3px;
+            font-size: 0.8rem;
+        }
+        .t-row {
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .t-row.close-entry { color: var(--warning-color); font-weight: bold; }
+        .t-total {
+            border-top: 1px solid #94a3b8;
+            margin-top: 4px;
+            padding-top: 2px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .closed-tag {
+            text-align: center;
+            color: #d97706;
+            font-weight: bold;
+            font-size: 0.75rem;
+            margin-top: 3px;
+            border: 1px dashed #d97706;
+            padding: 1px;
+            border-radius: 4px;
+        }
+        .error-msg {
+            color: var(--danger-color);
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>會計解題與學習助手：綜合損益架構與 T 字帳</h1>
+        <p class="subtitle">依據國際會計準則綜合損益架構，支援自訂分錄、詳細損益分類與期末結轉保留盈餘/其他權益！</p>
+    </header>
+
+    <div class="grid-3">
+        <!-- 左欄：自訂分錄輸入區 -->
+        <div class="card">
+            <h2>✍️ 輸入解題分錄</h2>
+            
+            <div class="form-group">
+                <label>交易摘要 / 說明：</label>
+                <input type="text" id="txDesc" placeholder="例如：銷貨收現、金融資產評價">
+            </div>
+
+            <!-- 借方區域 -->
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="color: #0369a1;">借方科目 (Debit)：</label>
+                    <button type="button" class="btn-add" onclick="addDebitRow()">+ 新增借方</button>
+                </div>
+                <div id="debitContainer" style="margin-top: 6px;">
+                    <div class="entry-row debit-row">
+                        <input type="text" class="acc-name" value="現金" placeholder="科目名稱" required>
+                        <select class="acc-type">
+                            <option value="BS" selected>實帳戶 (資產/負債/權益)</option>
+                            <option value="PNL_REV">營業收入</option>
+                            <option value="PNL_EXP">營業成本/費用</option>
+                            <option value="PNL_OTHER">其他損益 (投資/籌資/所得稅)</option>
+                            <option value="PNL_DISC">停業單位損益</option>
+                            <option value="OCI_RE">本期OCI-可重分類調整</option>
+                            <option value="OCI_NO">本期OCI-不可重分類調整</option>
+                        </select>
+                        <input type="number" class="acc-amount" placeholder="金額" min="1" required>
+                        <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 貸方區域 -->
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="color: #b45309;">貸方科目 (Credit)：</label>
+                    <button type="button" class="btn-add" onclick="addCreditRow()">+ 新增貸方</button>
+                </div>
+                <div id="creditContainer" style="margin-top: 6px;">
+                    <div class="entry-row credit-row">
+                        <input type="text" class="acc-name" value="資本" placeholder="科目名稱" required>
+                        <select class="acc-type">
+                            <option value="BS" selected>實帳戶 (資產/負債/權益)</option>
+                            <option value="PNL_REV">營業收入</option>
+                            <option value="PNL_EXP">營業成本/費用</option>
+                            <option value="PNL_OTHER">其他損益 (投資/籌資/所得稅)</option>
+                            <option value="PNL_DISC">停業單位損益</option>
+                            <option value="OCI_RE">本期OCI-可重分類調整</option>
+                            <option value="OCI_NO">本期OCI-不可重分類調整</option>
+                        </select>
+                        <input type="number" class="acc-amount" placeholder="金額" min="1" required>
+                        <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorMsg" class="error-msg">⚠️ 警告：借貸金額不相等！</div>
+
+            <button type="button" class="btn-submit" onclick="submitCustomTransaction()">➔ 新增分錄並過帳</button>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid var(--border-color);">
+            <button class="close-btn" onclick="performClosing()">⚡ 執行期末結帳 (結轉保留盈餘與其他權益)</button>
+            <button class="secondary" onclick="loadPresetData()">💡 載入標準架構範例題</button>
+            <button class="secondary" style="background:#dc2626;" onclick="resetData()">↺ 清空所有資料</button>
+        </div>
+
+        <!-- 中欄：日記簿 -->
+        <div class="card">
+            <h2>📖 日記簿 (Journal Entries)</h2>
+            <table id="journalTable">
+                <thead>
+                    <tr>
+                        <th>交易說明 / 科目名稱</th>
+                        <th class="text-right">借方 ($)</th>
+                        <th class="text-right">貸方 ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="3" style="text-align: center; color: #94a3b8;">請點擊右下方「載入標準架構範例題」開始！</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右欄：總分類帳 (T字帳) -->
+        <div class="card">
+            <h2>📊 總分類帳 (T-Accounts)</h2>
+            <div id="tAccountsContainer" class="t-accounts-container">
+                <p style="color: #94a3b8; font-size: 0.9rem;">載入範例或新增交易後自動產生...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let accountTypes = {};
+    let transactions = [];
+    let ledger = {};
+    let isClosed = false;
+
+    function createRowHTML() {
+        return `
+            <input type="text" class="acc-name" placeholder="科目名稱" required>
+            <select class="acc-type">
+                <option value="BS">實帳戶 (資產/負債/權益)</option>
+                <option value="PNL_REV">營業收入</option>
+                <option value="PNL_EXP">營業成本/費用</option>
+                <option value="PNL_OTHER">其他損益 (投資/籌資/所得稅)</option>
+                <option value="PNL_DISC">停業單位損益</option>
+                <option value="OCI_RE">本期OCI-可重分類調整</option>
+                <option value="OCI_NO">本期OCI-不可重分類調整</option>
+            </select>
+            <input type="number" class="acc-amount" placeholder="金額" min="1" required>
+            <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+        `;
+    }
+
+    function addDebitRow() {
+        const container = document.getElementById('debitContainer');
+        const div = document.createElement('div');
+        div.className = 'entry-row debit-row';
+        div.innerHTML = createRowHTML();
+        container.appendChild(div);
+    }
+
+    function addCreditRow() {
+        const container = document.getElementById('creditContainer');
+        const div = document.createElement('div');
+        div.className = 'entry-row credit-row';
+        div.innerHTML = createRowHTML();
+        container.appendChild(div);
+    }
+
+    function removeRow(btn) {
+        const row = btn.parentElement;
+        const container = row.parentElement;
+        if (container.children.length > 1) {
+            container.removeChild(row);
+        } else {
+            alert("借貸雙方至少需保留一個科目列！");
+        }
+    }
+
+    function submitCustomTransaction() {
+        if (isClosed) {
+            alert("本期已執行期末結帳！請先點擊「清空所有資料」以開始新練習。");
+            return;
+        }
+
+        const descInput = document.getElementById('txDesc');
+        const desc = descInput.value.trim() || "自訂交易";
+        const debitRows = document.querySelectorAll('.debit-row');
+        const creditRows = document.querySelectorAll('.credit-row');
+
+        let debits = [];
+        let credits = [];
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        for (let row of debitRows) {
+            const name = row.querySelector('.acc-name').value.trim();
+            const type = row.querySelector('.acc-type').value;
+            const amount = parseFloat(row.querySelector('.acc-amount').value);
+            if (!name || isNaN(amount) || amount <= 0) {
+                alert("請完整填寫借方科目名稱與有效金額！");
+                return;
+            }
+            debits.push({ name, type, amount });
+            totalDebit += amount;
+            accountTypes[name] = type;
+        }
+
+        for (let row of creditRows) {
+            const name = row.querySelector('.acc-name').value.trim();
+            const type = row.querySelector('.acc-type').value;
+            const amount = parseFloat(row.querySelector('.acc-amount').value);
+            if (!name || isNaN(amount) || amount <= 0) {
+                alert("請完整填寫貸方科目名稱與有效金額！");
+                return;
+            }
+            credits.push({ name, type, amount });
+            totalCredit += amount;
+            accountTypes[name] = type;
+        }
+
+        const errorMsg = document.getElementById('errorMsg');
+        if (Math.abs(totalDebit - totalCredit) > 0.01) {
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = `⚠️ 借貸不平衡！借方總計 $${totalDebit.toLocaleString()} ≠ 貸方總計 $${totalCredit.toLocaleString()}`;
+            return;
+        } else {
+            errorMsg.style.display = 'none';
+        }
+
+        transactions.push({ desc, debits, credits, type: 'normal' });
+        debits.forEach(d => postToLedger(d.name, d.amount, 'debit'));
+        credits.forEach(c => postToLedger(c.name, c.amount, 'credit'));
+
+        descInput.value = '';
+        render();
+    }
+
+    function postToLedger(account, amount, side, isCloseEntry = false) {
+        if (!ledger[account]) {
+            ledger[account] = { debitItems: [], creditItems: [], debitTotal: 0, creditTotal: 0 };
+        }
+        if (side === 'debit') {
+            ledger[account].debitItems.push({ amount, isCloseEntry });
+            ledger[account].debitTotal += amount;
+        } else {
+            ledger[account].creditItems.push({ amount, isCloseEntry });
+            ledger[account].creditTotal += amount;
+        }
+    }
+
+    function performClosing() {
+        if (isClosed) {
+            alert("已經結帳完畢！");
+            return;
+        }
+        if (transactions.length === 0) {
+            alert("目前尚無任何交易可供結轉！");
+            return;
+        }
+
+        // 1. 結轉所有損益類科目至「損益彙總」
+        Object.keys(ledger).forEach(acc => {
+            const type = accountTypes[acc];
+            if (type && type.startsWith('PNL_')) {
+                const net = ledger[acc].creditTotal - ledger[acc].debitTotal;
+                if (net !== 0) {
+                    if (net > 0) {
+                        transactions.push({
+                            desc: `【結帳】結轉 ${acc} 至損益彙總`,
+                            debits: [{ name: acc, amount: net }],
+                            credits: [{ name: "損益彙總", amount: net }],
+                            type: 'closing'
+                        });
+                        postToLedger(acc, net, 'debit', true);
+                        postToLedger("損益彙總", net, 'credit', true);
+                    } else {
+                        const absVal = Math.abs(net);
+                        transactions.push({
+                            desc: `【結帳】結轉 ${acc} 至損益彙總`,
+                            debits: [{ name: "損益彙總", amount: absVal }],
+                            credits: [{ name: acc, amount: absVal }],
+                            type: 'closing'
+                        });
+                        postToLedger("損益彙總", absVal, 'debit', true);
+                        postToLedger(acc, absVal, 'credit', true);
+                    }
+                    accountTypes["損益彙總"] = "PNL_SUMMARY";
+                }
+            } else if (type === 'OCI_RE' || type === 'OCI_NO') {
+                const netOCI = ledger[acc].creditTotal - ledger[acc].debitTotal;
+                if (netOCI !== 0) {
+                    if (netOCI > 0) {
+                        transactions.push({
+                            desc: `【結帳】將 ${acc} OCI 結轉至其他權益`,
+                            debits: [{ name: acc, amount: netOCI }],
+                            credits: [{ name: "其他權益", amount: netOCI }],
+                            type: 'closing'
+                        });
+                        postToLedger(acc, netOCI, 'debit', true);
+                        postToLedger("其他權益", netOCI, 'credit', true);
+                    } else {
+                        const absOCI = Math.abs(netOCI);
+                        transactions.push({
+                            desc: `【結帳】將 ${acc} OCI 結轉至其他權益`,
+                            debits: [{ name: "其他權益", amount: absOCI }],
+                            credits: [{ name: acc, amount: absOCI }],
+                            type: 'closing'
+                        });
+                        postToLedger("其他權益", absOCI, 'debit', true);
+                        postToLedger(acc, absOCI, 'credit', true);
+                    }
+                    accountTypes["其他權益"] = "BS";
+                }
+            }
+        });
+
+        // 2. 結轉「損益彙總」至「保留盈餘」，使損益彙總本身也結平歸零
+        if (ledger["損益彙總"]) {
+            accountTypes["損益彙總"] = "PNL_SUMMARY";
+            const summaryNet = ledger["損益彙總"].creditTotal - ledger["損益彙總"].debitTotal;
+            if (summaryNet !== 0) {
+                accountTypes["保留盈餘"] = "BS";
+                if (summaryNet > 0) {
+                    transactions.push({
+                        desc: "【結帳】結轉損益彙總（本期淨利）至保留盈餘",
+                        debits: [{ name: "損益彙總", amount: summaryNet }],
+                        credits: [{ name: "保留盈餘", amount: summaryNet }],
+                        type: 'closing'
+                    });
+                    postToLedger("損益彙總", summaryNet, 'debit', true);
+                    postToLedger("保留盈餘", summaryNet, 'credit', true);
+                } else {
+                    const absLoss = Math.abs(summaryNet);
+                    transactions.push({
+                        desc: "【結帳】結轉損益彙總（本期淨損）至保留盈餘",
+                        debits: [{ name: "保留盈餘", amount: absLoss }],
+                        credits: [{ name: "損益彙總", amount: absLoss }],
+                        type: 'closing'
+                    });
+                    postToLedger("保留盈餘", absLoss, 'debit', true);
+                    postToLedger("損益彙總", absLoss, 'credit', true);
+                }
+            }
+        }
+
+        isClosed = true;
+        render();
+    }
+
+    function loadPresetData() {
+        resetData();
+        const presets = [
+            { desc: "營業收入現金入帳", debits: [{ name: "現金", type: "BS", amount: 150000 }], credits: [{ name: "營業收入", type: "PNL_REV", amount: 150000 }] },
+            { desc: "支付營業費用", debits: [{ name: "營業費用", type: "PNL_EXP", amount: 50000 }], credits: [{ name: "現金", type: "BS", amount: 50000 }] },
+            { desc: "處分投資收益", debits: [{ name: "現金", type: "BS", amount: 20000 }], credits: [{ name: "投資種類收益", type: "PNL_OTHER", amount: 20000 }] },
+            { desc: "金融資產未實現評價利益 (可重分類OCI)", debits: [{ name: "透過OCI衡量金融資產", type: "BS", amount: 10000 }], credits: [{ name: "FVOCI未實現評價損益", type: "OCI_RE", amount: 10000 }] }
+        ];
+
+        presets.forEach(p => {
+            p.debits.forEach(d => { accountTypes[d.name] = d.type; postToLedger(d.name, d.amount, 'debit'); });
+            p.credits.forEach(c => { accountTypes[c.name] = c.type; postToLedger(c.name, c.amount, 'credit'); });
+            transactions.push({ ...p, type: 'normal' });
+        });
+
+        render();
+    }
+
+    function resetData() {
+        transactions = [];
+        ledger = {};
+        accountTypes = {};
+        isClosed = false;
+        document.getElementById('errorMsg').style.display = 'none';
+        render();
+    }
+
+    function render() {
+        const jTableBody = document.querySelector("#journalTable tbody");
+        if (transactions.length === 0) {
+            jTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94a3b8;">請點擊右下方「載入標準架構範例題」開始！</td></tr>`;
+        } else {
+            let html = "";
+            transactions.forEach((tx, index) => {
+                const rowClass = tx.type === 'closing' ? 'closing-row' : '';
+                html += `
+                    <tr class="${rowClass}">
+                        <td colspan="3"><strong>(${index + 1}) ${tx.desc}</strong></td>
+                    </tr>
+                `;
+                tx.debits.forEach(d => {
+                    html += `
+                        <tr class="${rowClass}">
+                            <td class="indent">借：${d.name}</td>
+                            <td class="text-right">${d.amount.toLocaleString()}</td>
+                            <td></td>
+                        </tr>
+                    `;
+                });
+                tx.credits.forEach(c => {
+                    html += `
+                        <tr class="${rowClass}">
+                            <td class="indent" style="padding-left: 35px !important;">貸：${c.name}</td>
+                            <td></td>
+                            <td class="text-right">${c.amount.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+            });
+            jTableBody.innerHTML = html;
+        }
+
+        const tContainer = document.querySelector("#tAccountsContainer");
+        const accounts = Object.keys(ledger);
+        if (accounts.length === 0) {
+            tContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.9rem;">載入範例或新增交易後自動產生...</p>`;
+        } else {
+            let tHtml = "";
+            accounts.forEach(acc => {
+                const data = ledger[acc];
+                let type = accountTypes[acc] || "BS";
+                if (acc === "損益彙總") {
+                    type = "PNL_SUMMARY";
+                }
+                
+                let badgeClass = "badge-bs";
+                let badgeText = "實帳戶";
+                if (type.startsWith("PNL_") || type === "PNL_SUMMARY") { 
+                    badgeClass = "badge-pnl"; 
+                    badgeText = type === "PNL_SUMMARY" ? "虛帳戶(暫時性)" : "損益類"; 
+                }
+                else if (type === "OCI_RE") { badgeClass = "badge-oci-reclass"; badgeText = "OCI(可重分類)"; }
+                else if (type === "OCI_NO") { badgeClass = "badge-oci-noreclass"; badgeText = "OCI(不可重分類)"; }
+
+                let debitRows = data.debitItems.map(item => 
+                    `<div class="t-row ${item.isCloseEntry ? 'close-entry' : ''}"><span></span><span>${item.amount.toLocaleString()}</span></div>`
+                ).join('');
+                
+                let creditRows = data.creditItems.map(item => 
+                    `<div class="t-row ${item.isCloseEntry ? 'close-entry' : ''}"><span>${item.amount.toLocaleString()}</span><span></span></div>`
+                ).join('');
+
+                const isAccountZero = (data.debitTotal === data.creditTotal) && isClosed && (!type.startsWith("BS") || type === "PNL_SUMMARY");
+
+                tHtml += `
+                    <div class="t-account ${isAccountZero ? 'closed' : ''}">
+                        <div class="t-account-title">
+                            <span>${acc}</span>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <div class="t-body">
+                            <div class="t-side">${debitRows}</div>
+                            <div class="t-side" style="text-align: right;">${creditRows}</div>
+                        </div>
+                        <div class="t-total">
+                            <span>借:${data.debitTotal.toLocaleString()}</span>
+                            <span>貸:${data.creditTotal.toLocaleString()}</span>
+                        </div>
+                        ${isAccountZero ? '<div class="closed-tag">✓ 已結平歸清</div>' : ''}
+                    </div>
+                `;
+            });
+            tContainer.innerHTML = tHtml;
+        }
+    }
+</script>
+
+</body>
+</html>
